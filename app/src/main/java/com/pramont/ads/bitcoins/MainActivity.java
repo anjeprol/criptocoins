@@ -4,21 +4,30 @@ import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.InterstitialAd;
 
+import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.widget.TextView;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     // Remove the below line after defining your own ad unit ID.
     private static final String TAG = "DEBUG";
-    private static final String TOAST_TEXT = "Test ads are being shown. "
-            + "To show live ads, replace the ad unit ID in res/values/strings.xml with your own ad unit ID.";
-
-    private static final int START_LEVEL = 1;
     private InterstitialAd mInterstitialAd;
+    public static final String URL = "https://bitso.com/login";
+    private WebView mWebView = null ;
+    private WebSettings mWebSettings ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,29 +38,34 @@ public class MainActivity extends AppCompatActivity {
         mInterstitialAd = newInterstitialAd();
         loadInterstitial();
 
-    }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        if (id == R.id.action_settings)
-        {
-            return true;
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
 
-        return super.onOptionsItemSelected(item);
+        /** WebView embedded no need to add it into any layout**/
+        mWebView = new WebView(this);
+        setContentView(mWebView);
+
+        /** Enabling java script for web view**/
+        mWebSettings = mWebView.getSettings();
+        mWebSettings.setJavaScriptEnabled(true);
+
+        /** Overriding the loading page**/
+        mWebView.setWebViewClient(new WebViewClient() {
+            @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                view.loadUrl(request.getUrl().toString());
+                Map<String,String> myMap = new HashMap<String, String>();
+                myMap = request.getRequestHeaders();
+                Log.d(TAG,"Request:"+request.getUrl());
+                return super.shouldOverrideUrlLoading(view, request);
+            }
+        });
+        mWebView.loadUrl(URL);
+
     }
 
     private InterstitialAd newInterstitialAd() {
@@ -105,5 +119,16 @@ public class MainActivity extends AppCompatActivity {
         //mLevelTextView.setText("Level " + (++mLevel));
         //mInterstitialAd = newInterstitialAd();
         //loadInterstitial();
+    }
+
+    /** Giving the UX for back button (android) as keyboard back space **/
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if((keyCode == KeyEvent.KEYCODE_BACK) && mWebView.canGoBack()) {
+            mWebView.goBack();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }
